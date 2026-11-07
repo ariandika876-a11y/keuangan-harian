@@ -1,0 +1,333 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keuangan Harianku</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f5;color:#24352e;font-family:Arial,sans-serif}
+header{background:#183d35;color:white;padding:22px 18px}
+header h2{margin:0 0 6px}
+header p{margin:0;color:#c7ded4;font-size:13px}
+main{max-width:850px;margin:auto;padding:16px}
+.card{background:white;border-radius:14px;padding:17px;margin-bottom:15px;box-shadow:0 2px 9px #00000009}
+.balance{background:#183d35;color:white}
+.balance small{color:#c7ded4}
+.balance h1{font-size:30px;margin:10px 0 20px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:#f3f7f5;padding:13px;border-radius:10px}
+.stat small{color:#687a70}
+.stat h3{margin:8px 0 0;font-size:19px}
+.green{color:#16824e}.red{color:#d14b4b}
+h3{margin-top:0}
+label{display:block;font-size:13px;font-weight:bold;margin:12px 0 6px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #d8e1dc;border-radius:9px;background:white;font-size:15px}
+button{border:0;border-radius:9px;padding:12px 15px;font-size:14px;font-weight:bold;cursor:pointer}
+.primary{background:#183d35;color:white;width:100%;margin-top:16px}
+.secondary{background:#e6efea;color:#183d35}
+.danger{background:#fff0ee;color:#bd3939}
+.row{display:flex;gap:9px;align-items:center}
+.row>*{flex:1}
+.tabs{display:flex;gap:8px;margin-bottom:13px}
+.tabs button{flex:1;background:#edf1ee;color:#52645a}
+.tabs button.active{background:#183d35;color:white}
+.transaction{padding:13px 0;border-bottom:1px solid #edf0ed}
+.transaction:last-child{border:0}
+.transaction strong{display:block;margin-bottom:5px}
+.muted{font-size:12px;color:#829087}
+.amount{font-weight:bold;text-align:right}
+.actions{display:flex;gap:5px;margin-top:8px;justify-content:flex-end}
+.actions button{padding:7px 10px;font-size:12px}
+.barrow{margin:13px 0}
+.barbg{height:9px;background:#edf0ed;border-radius:9px;overflow:hidden;margin-top:6px}
+.barfill{height:100%;background:#26936a;border-radius:9px}
+.empty{text-align:center;padding:25px;color:#87938c}
+@media(max-width:430px){
+ main{padding:11px}
+ .card{padding:14px}
+ .balance h1{font-size:26px}
+}
+</style>
+</head>
+<body>
+<header>
+<h2>💰 KEUANGAN HARIANKU</h2>
+<p>Catatan pemasukan dan pengeluaran pribadi</p>
+</header>
+
+<main>
+<section class="card balance">
+<small>Saldo keseluruhan</small>
+<h1 id="balance">Rp 0</h1>
+<div class="stats">
+<div class="stat">
+<small>⬇ Pemasukan</small>
+<h3 class="green" id="income">Rp 0</h3>
+</div>
+<div class="stat">
+<small>⬆ Pengeluaran</small>
+<h3 class="red" id="expense">Rp 0</h3>
+</div>
+</div>
+</section>
+
+<section class="card">
+<h3>📊 Ringkasan Bulan Ini</h3>
+<label>Pilih bulan</label>
+<input type="month" id="month">
+<div class="stats" style="margin-top:12px">
+<div class="stat">
+<small>Total pemasukan</small>
+<h3 class="green" id="monthIn">Rp 0</h3>
+</div>
+<div class="stat">
+<small>Total pengeluaran</small>
+<h3 class="red" id="monthOut">Rp 0</h3>
+</div>
+</div>
+</section>
+
+<section class="card" id="formCard">
+<h3>➕ Input Transaksi</h3>
+<div class="tabs">
+<button id="outTab" class="active" onclick="setType('Pengeluaran')">Pengeluaran</button>
+<button id="inTab" onclick="setType('Pemasukan')">Pemasukan</button>
+</div>
+<form id="form">
+<input type="hidden" id="editId">
+<label>Tanggal transaksi</label>
+<input type="date" id="date" required>
+<label>Nama barang / keperluan</label>
+<input id="name" placeholder="Contoh: Beli beras, makan siang" required>
+<label>Kategori</label>
+<select id="category"></select>
+<label>Nominal (Rp)</label>
+<input type="number" id="amount" min="1" step="1" placeholder="Contoh: 50000" required>
+<label>Metode pembayaran</label>
+<select id="payment">
+<option>Cash / Tunai</option>
+<option>Transfer Bank</option>
+<option>QRIS</option>
+<option>Debit</option>
+<option>Kartu Kredit</option>
+<option>E-Wallet</option>
+</select>
+<label>Keterangan tambahan</label>
+<textarea id="note" rows="2" placeholder="Keterangan transaksi..."></textarea>
+<button class="primary" type="submit" id="saveBtn">SIMPAN TRANSAKSI</button>
+<button type="button" class="secondary" style="width:100%;margin-top:8px;display:none" id="cancelBtn" onclick="cancelEdit()">Batal edit</button>
+</form>
+</section>
+
+<section class="card">
+<h3>📋 Riwayat Transaksi</h3>
+<label>Filter tanggal</label>
+<div class="row">
+<input type="date" id="filterDate">
+<button class="secondary" onclick="document.getElementById('filterDate').value='';render()">Semua</button>
+</div>
+<label>Jenis transaksi</label>
+<select id="filterType">
+<option value="Semua">Semua transaksi</option>
+<option value="Pengeluaran">Pengeluaran</option>
+<option value="Pemasukan">Pemasukan</option>
+</select>
+<div id="history"></div>
+</section>
+
+<section class="card">
+<h3>📈 Pengeluaran per Kategori</h3>
+<div id="categoryReport"></div>
+</section>
+
+<section class="card">
+<h3>📥 Unduh Laporan</h3>
+<p class="muted">Unduh seluruh catatan transaksi dalam format CSV yang dapat dibuka di Excel.</p>
+<button class="primary" onclick="exportCSV()">DOWNLOAD LAPORAN EXCEL (CSV)</button>
+</section>
+<p class="muted" style="text-align:center;padding:10px">Keuangan Harianku · Versi 1.0</p>
+</main>
+
+<script>
+const categories = {
+ Pengeluaran:[
+ "Makan & Minum","Belanja Rumah Tangga","Transportasi",
+ "Bensin","Parkir & Tol","Listrik & Air","Internet & Pulsa",
+ "Kesehatan","Pendidikan","Kebutuhan Pribadi","Hiburan",
+ "Cicilan & Utang","Sosial / Donasi","Lain-lain"
+ ],
+ Pemasukan:[
+ "Gaji","Bisnis","Penjualan","Bonus","Investasi",
+ "Hadiah","Pendapatan Lain-lain"
+ ]
+};
+
+let transactions=[];
+let type="Pengeluaran";
+
+const money=n=>"Rp "+Number(n).toLocaleString("id-ID");
+const el=id=>document.getElementById(id);
+const today=new Date().toLocaleDateString("en-CA");
+
+function load(){
+ try{
+ transactions=JSON.parse(localStorage.getItem("keuangan_harian")||"[]");
+ }catch(e){transactions=[]}
+}
+
+function save(){
+ localStorage.setItem("keuangan_harian",JSON.stringify(transactions));
+}
+
+function setType(t){
+ type=t;
+ el("outTab").classList.toggle("active",t==="Pengeluaran");
+ el("inTab").classList.toggle("active",t==="Pemasukan");
+ el("category").innerHTML=categories[t].map(c=>`<option>${c}</option>`).join("");
+}
+
+function totals(list){
+ return list.reduce((s,x)=>s+Number(x.amount),0);
+}
+
+function render(){
+ const income=totals(transactions.filter(x=>x.type==="Pemasukan"));
+ const expense=totals(transactions.filter(x=>x.type==="Pengeluaran"));
+ el("balance").textContent=money(income-expense);
+ el("income").textContent=money(income);
+ el("expense").textContent=money(expense);
+
+ const month=el("month").value;
+ const monthly=transactions.filter(x=>x.date.startsWith(month));
+ el("monthIn").textContent=money(totals(monthly.filter(x=>x.type==="Pemasukan")));
+ el("monthOut").textContent=money(totals(monthly.filter(x=>x.type==="Pengeluaran")));
+
+ const fd=el("filterDate").value;
+ const ft=el("filterType").value;
+ const list=transactions.filter(x=>
+ (!fd||x.date===fd)&&(ft==="Semua"||x.type===ft)
+ ).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+
+ el("history").innerHTML=list.length?list.map(x=>`
+ <div class="transaction">
+ <div class="row">
+ <div>
+ <strong>${escapeHTML(x.name)}</strong>
+ <div class="muted">${escapeHTML(x.category)} · ${x.date}</div>
+ <div class="muted">${escapeHTML(x.payment)} · ${escapeHTML(x.note||"-")}</div>
+ </div>
+ <div class="amount ${x.type==="Pemasukan"?"green":"red"}">
+ ${x.type==="Pemasukan"?"+":"-"}${money(x.amount)}
+ </div>
+ </div>
+ <div class="actions">
+ <button class="secondary" onclick="edit(${x.id})">Edit</button>
+ <button class="danger" onclick="removeItem(${x.id})">Hapus</button>
+ </div>
+ </div>`).join(""):'<div class="empty">Belum ada transaksi.</div>';
+
+ const expenses=transactions.filter(x=>x.type==="Pengeluaran"&&(!fd||x.date===fd));
+ const groups={};
+ expenses.forEach(x=>groups[x.category]=(groups[x.category]||0)+Number(x.amount));
+ const total=totals(expenses);
+ el("categoryReport").innerHTML=Object.entries(groups).length?
+ Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`
+ <div class="barrow">
+ <div class="row"><span>${escapeHTML(c)}</span><strong style="text-align:right">${money(n)}</strong></div>
+ <div class="barbg"><div class="barfill" style="width:${n/Math.max(total,1)*100}%"></div></div>
+ </div>`).join(""):'<div class="empty">Belum ada pengeluaran.</div>';
+}
+
+function escapeHTML(s){
+ return String(s).replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ })[c]);
+}
+
+el("form").addEventListener("submit",e=>{
+ e.preventDefault();
+ const amount=Number(el("amount").value);
+ if(!Number.isFinite(amount)||amount<=0)return alert("Nominal tidak valid.");
+
+ const id=el("editId").value;
+ const data={
+ id:id?Number(id):Date.now(),
+ type,date:el("date").value,
+ name:el("name").value.trim(),
+ category:el("category").value,
+ amount,
+ payment:el("payment").value,
+ note:el("note").value.trim()
+ };
+ if(!data.name||!data.date)return alert("Lengkapi data transaksi.");
+
+ if(id){
+ transactions=transactions.map(x=>x.id===Number(id)?data:x);
+ }else{
+ transactions.push(data);
+ }
+ save();
+ cancelEdit();
+ render();
+ alert("Transaksi berhasil disimpan!");
+});
+
+function edit(id){
+ const x=transactions.find(t=>t.id===id);
+ if(!x)return;
+ type=x.type;setType(type);
+ el("editId").value=x.id;
+ el("date").value=x.date;
+ el("name").value=x.name;
+ el("category").value=x.category;
+ el("amount").value=x.amount;
+ el("payment").value=x.payment;
+ el("note").value=x.note;
+ el("saveBtn").textContent="SIMPAN PERUBAHAN";
+ el("cancelBtn").style.display="block";
+ el("formCard").scrollIntoView({behavior:"smooth"});
+}
+
+function cancelEdit(){
+ el("form").reset();
+ el("editId").value="";
+ el("date").value=today;
+ setType("Pengeluaran");
+ el("saveBtn").textContent="SIMPAN TRANSAKSI";
+ el("cancelBtn").style.display="none";
+}
+
+function removeItem(id){
+ if(!confirm("Yakin ingin menghapus transaksi ini?"))return;
+ transactions=transactions.filter(x=>x.id!==id);
+ save();render();
+}
+
+function exportCSV(){
+ const rows=[
+ ["Tanggal","Jenis","Nama","Kategori","Nominal","Pembayaran","Keterangan"],
+ ...transactions.map(x=>[
+ x.date,x.type,x.name,x.category,x.amount,x.payment,x.note
+ ])
+ ];
+ const csv="\uFEFF"+rows.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;a.download="laporan-keuangan.csv";a.click();
+ URL.revokeObjectURL(url);
+}
+
+el("filterDate").addEventListener("change",render);
+el("filterType").addEventListener("change",render);
+el("month").addEventListener("change",render);
+
+el("month").value=today.slice(0,7);
+load();
+cancelEdit();
+render();
+</script>
+</body>
+</html>
